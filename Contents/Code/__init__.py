@@ -1,21 +1,3 @@
-# Notes
-
-# url service test
-# I love lucy full episodes have issues - The Gossip played only the first block and then gave error. Fred and Ethel Fight
-# played first two sections and then played credits twice
-# found a cosby episode that is playing the last section double. Roseanne and Curb Your Enthusiasm work fine
-
-# Could not find any jsons for the site. Did find the html with images and links for Original Full Episodes
-# Found that there is are mgids in most pages that can be used with the feed used to find video files (see FEED variable)
-# Episode or video pages as well as the full episode main pages contain the mgid for the video or episode currently
-# playing. These are used below to get extra info needed for videos
-# Show pages and the main video clips page contain a playlist mgid that gives the latest video clips
-# You can also add the show id from the shows main page found in the 'http://repo.comedycentral.com/feeds' url
-# to 'http://www.tvland.com/feeds/mrss?uri=mgid:cms:playlist:tvland.com:' + show_id and get the latest 25 videos from each show
-# Not sure how this could be used other than replacing the existing viceo clip sections or adding a latest videos section to 
-# each show's video clip section. Maybe later the site will add more playlists options
-# thought the playlist could give links to thumbs for shows but all give the main thumb as 
-# 'http://www.tvland.com/sitewide/img/sprites/TVLand_bug2.png'
 
 TITLE    = 'TVLand'
 PREFIX   = '/video/tvland'
@@ -433,21 +415,22 @@ def GetDesc(url):
   desc = xml.xpath('//channel/description//text()')[0]
   return desc
 
-##################################################################################################################################
-#DON'T THINK WE NEED THIS ANYMORE
-# this pulls the numbers from the pagination code at the bottom of each page
-# it only works to page nine, so may need to add a check for more pages
-@route(PREFIX + '/getpages')
-def GetPages(url, total):
+# Notes
 
-  page_list = []
-  page_list.append(1)
-  page = HTML.ElementFromURL(url)
-  for page in page.xpath('//div[@class="search_pagination"]/span/a'):
-    num = page.xpath('.//text()')[0]
-    num = int(num)
-    page_list.append(num)
-  page_num = len(page_list)
-#  total_pages = int(total) / 20
-# 
-  return (page_num)
+# url service test
+# I love lucy full episodes have issues - The Gossip played only the first block and then gave error. Fred and Ethel Fight
+# played first two sections and then played credits twice
+# found a cosby episode that is playing the last section double. Roseanne and Curb Your Enthusiasm work fine
+
+# Could not find any jsons for the site. Did find the html with images and links for Original Full Episodes
+# Found that there is are mgids in most pages that can be used with the feed used to find video files (see FEED variable)
+# Episode or video pages as well as the full episode main pages contain the mgid for the video or episode currently
+# playing. These are used below to get extra info needed for videos
+# Show pages and the main video clips page contain a playlist mgid that gives the latest video clips
+# You can also add the show id from the shows main page found in the 'http://repo.comedycentral.com/feeds' url
+# to 'http://www.tvland.com/feeds/mrss?uri=mgid:cms:playlist:tvland.com:' + show_id and get the latest 25 videos from each show
+# Not sure how this could be used other than replacing the existing viceo clip sections or adding a latest videos section to 
+# each show's video clip section. Maybe later the site will add more playlists options
+# thought the playlist could give links to thumbs for shows but all give the main thumb as 
+# 'http://www.tvland.com/sitewide/img/sprites/TVLand_bug2.png'
+
