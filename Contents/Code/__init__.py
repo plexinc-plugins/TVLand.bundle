@@ -4,8 +4,8 @@ PREFIX   = '/video/tvland'
 ART      = 'art-default.jpg'
 ICON     = 'icon-default.png'
 
-BASE_URL = 'http://www.tvland.com'
-FULL_EPISODES = 'http://www.tvland.com/full-episodes'
+TVLAND_URL = 'http://www.tvland.com'
+FULL_EPS = 'http://www.tvland.com/full-episodes'
 # or get them from any pages watch more full episode section
 HIC = 'http://www.tvland.com/shows/hot-in-cleveland/full-episodes'
 CLIPS = 'http://www.tvland.com/video-clips'
@@ -82,7 +82,8 @@ def FullEpShows(title, show_type):
     url = show.xpath('./div/div[@class="showTitle"]/a//@href')[0]
     thumb = show.xpath('./div/a/img//@src')[0]
     thumb = thumb.split('?')[0]
-    # do not really need total shows, but good to have xpath already
+    # do not really need total shows here since none of the full episodes have multiple pages
+	# but good to have the xpath to find it already if needed later
     # total = show.xpath('./div/div[@class="episodeNumber"]//text()')[0]
     # total = int(total.replace(' Full Episodes', ''))
 
@@ -131,13 +132,17 @@ def VideoClipShows(title):
 
 #########################################################################################################################
 # For Full Episodes
-# found this that gives shows and episodes with descriptions and thumbs
+# found this that gives shows and episodes with descriptions and thumbs for original show full episodes
 # http://www.tvland.com/fragments/search_results/related_episodes_seasons?showId=25573&seasonId=63748
 @route(PREFIX + '/primefullepisodes')
 def PrimeFullEpisodes(title, url):
 
   oc = ObjectContainer(title2=title)
   showid = ShowID(url)
+  # they usually only make the current season and a couple episodes from the last season available on the site
+  # but based on the time of the year, the newest season folder may be empty on the site, so you would
+  # have to go back three season. So the only way to make sure we were getting all episodes was to 
+  # pull and go through the page with all the seasons
   season_list = GetSeasonIDs(url)
   seasons = len(season_list)
   while seasons > 0:
@@ -204,16 +209,18 @@ def FullEpisodes(title, url):
       date = Datetime.ParseDate(date)
       thumb = episode.xpath('./div/div[@class="episodeImage"]/a/img//@src')[0]
       thumb = thumb.split('?')[0]
-      # for some reason I get out of range erros on description and duration. So using mgid for description
+      # because some of the shows do not have a separate entry for the duration, it messes up my pull for 
+	  # description and duration, so best to get description from mgid rss and put a try on duration
       try:
         description = GetDesc(ep_url)
       except:
         description = 'No Description'
-      # below is the xpath from the page that gave out of range errors
-      # description = episode.xpath('./div[@class="episodeContentContainer"]/div/div[@class="episodeDescription"]/text')[0]
-      # duration = episode.xpath('./div[@class="episodeContentContainer"]/div/div[@class="episodeDescription"]/span//text()')[0]
-      # duration = duration.replace("(", '').replace(")", '')
-      # duration = Datetime.MillisecondsFromString(duration)
+      try:
+        duration = episode.xpath('./div/div/div[@class="episodeDescription"]/span//text()')[0]
+        duration = duration.replace("(", '').replace(")", '')
+        duration = Datetime.MillisecondsFromString(duration)
+      except:
+        duration = 0
 
       oc.add(EpisodeObject(
         url = ep_url, 
@@ -221,7 +228,7 @@ def FullEpisodes(title, url):
         thumb = Resource.ContentsOfURLWithFallback(thumb, fallback=R(ICON)),
         summary = description,
         index = int(episode_num),
-        # duration = int(duration),
+        duration = int(duration),
         originally_available_at = date))
 
     else:
@@ -283,14 +290,12 @@ def Clips(title, url, total, page = 1):
       title = title.lstrip()
       thumb = episode.xpath('./div/div/div[@class="search_image"]/a/div/div/div/img//@src')[0]
       thumb = thumb.split('?')[0]
-      # for some reason I get out of range errors on description. so using mgid and xml instead
+      # because some of the shows do not have a separate entry for the duration, it messes up my pull for
+	  # description and duration, so best to get description from mgid rss and put a try on duration
       try:
         description = GetDesc(ep_url)
       except:
         description = 'No Description'
-      # below is the xpath from the page that gave out of range errors
-      # description = episode.xpath('./div/div/div[@class="search_text"]/text')[0]
-      # description = description.strip()
       try:
         duration = episode.xpath('./div/div/div[@class="search_text"]/span//text()')[0]
         duration = duration.replace("(", '').replace(")", '')
@@ -308,9 +313,7 @@ def Clips(title, url, total, page = 1):
     else:
       pass
 
-# here we would add pages and use the YouTube as example
-#  for some reason I can only go as high as nine. I think the pages_num cannot pick up any more because it does not show 
-# higher than nine with the base url
+# here we add pages and used total number of videos to make sure it returns videos with more than 9 pages of returns
   if pages_num > 1:
     page = html.xpath('//div[@class="search_pagination"]/span[@class="pageOn"]//text()')[1]
     Log('the value of page is %s' %page)
@@ -352,7 +355,7 @@ def GetSeasonIDs(url):
 
 ##################################################################################################################################
 # this pulls the numbers from the pagination code at the bottom of each page
-# it only works to page nine, so may need to add a check for more pages
+# use the total number of videos to make sure we get all returns
 @route(PREFIX + '/getnumpages', total=int)
 def GetNumPages(total):
 
@@ -366,9 +369,8 @@ def GetNumPages(total):
   return (total_pages)
 
 #############################################################################################################################
-# This is a function to pull the thumb for shows
-# cannot get the thumbs for video clip shows so this is a way to try to find them
-# the statement below works for most
+# This is a function to pull the thumb for shows. Cannot get the thumbs for video clip shows so this is a way to 
+# try to find them. the statement below works for most is
 # http://tvland.mtvnimages.com/images/shows/ + show_name + /promos/ + show_name + _watch_00.jpg
 @route(PREFIX + '/getthumb')
 def GetThumb(title):
