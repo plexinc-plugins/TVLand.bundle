@@ -1,70 +1,59 @@
-
 TITLE    = 'TVLand'
 PREFIX   = '/video/tvland'
 ART      = 'art-default.jpg'
 ICON     = 'icon-default.png'
 
-TVLAND_URL = 'http://www.tvland.com'
-FULL_EPS = 'http://www.tvland.com/full-episodes'
-# or get them from any pages watch more full episode section
+# We get the list of full episode shows from any pages with a watch more full episode section.
+# here we are using Hot in Cleveland full episode page
 HIC = 'http://www.tvland.com/shows/hot-in-cleveland/full-episodes'
 CLIPS = 'http://www.tvland.com/video-clips'
-EPISODE_FIND = 'http://www.tvland.com/fragments/search_results/related_episodes_seasons?'
-SHOW_THUMBS = 'http://tvland.mtvnimages.com/images/shows/'
-FEED = 'http://www.tvland.com/feeds/mrss?uri='
-
+EPISODE_FIND = 'http://www.tvland.com/fragments/search_results/related_episodes_seasons?showId=%s&seasonId=%s'
+SHOW_THUMBS = 'http://tvland.mtvnimages.com/images/shows/%s/promos/'
+FEED = 'http://www.tvland.com/feeds/mrss?uri=%s'
+FIRST_PAGE = '?page=1&sortBy=date&contentTypes=Video&season=&collectionId='
+# This regex gets the show id for the EPISODE_FIND
 RE_SHOW_ID = Regex('var showId = "(.+?)";')
-
-http = 'http:'
-COUNTER = 0
 
 ###################################################################################################
 # Set up containers for all possible objects
 def Start():
 
   ObjectContainer.title1 = TITLE
-  ObjectContainer.art = R(ART)
-
-  DirectoryObject.thumb = R(ICON)
-  DirectoryObject.art = R(ART)
-  EpisodeObject.thumb = R(ICON)
-  EpisodeObject.art = R(ART)
-  VideoClipObject.thumb = R(ICON)
-  VideoClipObject.art = R(ART)
+  HTTP.CacheTime = CACHE_1DAY 
 
 ###################################################################################################
-# This Main Menu provides a section for each type of show. It is hardcoded in since the types of show have to be set and preprogrammed in
-@handler(PREFIX, TITLE, art=ART, thumb=ICON)
-
+@handler(PREFIX, TITLE)
 def MainMenu():
 
   oc = ObjectContainer()
   
-  oc.add(DirectoryObject(key=Callback(FullEpTypes, title="Full Episodes"), title="Full Episodes", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(FullEpTypes, title="Full Episodes"), title="Full Episodes"))
 	
-  oc.add(DirectoryObject(key=Callback(VideoClipTypes, title="Video Clips"), title="Video Clips", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(VideoClipTypes, title="Video Clips"), title="Video Clips"))
 	
   return oc
 
 #########################################################################################################################
+@route(PREFIX + '/fulleptypes')
 def FullEpTypes(title):
 
   oc = ObjectContainer(title2=title)
   
-  oc.add(DirectoryObject(key=Callback(FullEpShows, title="Original Shows", show_type='Original'), title="Original Shows", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(FullEpShows, title="Original Shows", show_type='Original'), title="Original Shows"))
 	
-  oc.add(DirectoryObject(key=Callback(FullEpShows, title="Acquired Shows", show_type='Acquired'), title="Acquired Shows", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(FullEpShows, title="Acquired Shows", show_type='Acquired'), title="Acquired Shows"))
 	
   return oc
 
 #########################################################################################################################
+@route(PREFIX + '/videocliptypes')
 def VideoClipTypes(title):
 
   oc = ObjectContainer(title2=title)
   
-  oc.add(DirectoryObject(key=Callback(VideoClipLatest, title="Video Clips"), title="Latest Video Clips", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(VideoClipLatest, title="Video Clips"), title="Latest Video Clips"))
 	
-  oc.add(DirectoryObject(key=Callback(VideoClipShows, title="Video Clips"), title="Video Clips By Show", thumb=R(ICON)))
+  oc.add(DirectoryObject(key=Callback(VideoClipShows, title="Video Clips"), title="Video Clips By Show"))
 	
   return oc
 
@@ -82,21 +71,17 @@ def FullEpShows(title, show_type):
     url = show.xpath('./div/div[@class="showTitle"]/a//@href')[0]
     thumb = show.xpath('./div/a/img//@src')[0]
     thumb = thumb.split('?')[0]
-    # do not really need total shows here since none of the full episodes have multiple pages
-	# but good to have the xpath to find it already if needed later
-    # total = show.xpath('./div/div[@class="episodeNumber"]//text()')[0]
-    # total = int(total.replace(' Full Episodes', ''))
 
     if show_type == 'Original':
-      oc.add(DirectoryObject(key=Callback(PrimeFullEpisodes, title=title, url=url), title=title, thumb=thumb))
+      oc.add(DirectoryObject(key=Callback(PrimeFullEpisodes, title=title, url=url), title=title, thumb=Resource.ContentsOfURLWithFallback(thumb)))
     else:
-      oc.add(DirectoryObject(key=Callback(FullEpisodes, title=title, url=url), title=title, thumb=thumb))
+      oc.add(DirectoryObject(key=Callback(FullEpisodes, title=title, url=url), title=title, thumb=Resource.ContentsOfURLWithFallback(thumb)))
 	
   oc.objects.sort(key = lambda obj: obj.title)
 
   if len(oc) < 1:
     Log ('still no value for objects')
-    return ObjectContainer(header="Empty", message="There are no shows to list right now.")
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no shows to list right now.")
   else:
     return oc
 
@@ -111,28 +96,21 @@ def VideoClipShows(title):
   for show in html.xpath('//div[@class="showsList"]/a'):
     title = show.xpath('./text()')[0]
     url = show.xpath('.//@href')[0]
-    total = show.xpath('./span//text()')[0]
-    total = total.replace("(", '').replace(")", '')
-    icon = show.xpath('.//@class')[0]
-    if icon.find('prime') > -1:
-      prime = True
-    else:
-      prime = False
-    thumb = GetThumb(title)
+    thumb = GetThumb(url)
 
-    oc.add(DirectoryObject(key=Callback(Clips, title=title, url=url, total=total), title=title, thumb=thumb))
+    oc.add(DirectoryObject(key=Callback(Clips, title=title, url=url), title=title, thumb=Resource.ContentsOfURLWithFallback(thumb)))
 	   
   oc.objects.sort(key = lambda obj: obj.title)
 
   if len(oc) < 1:
     Log ('still no value for objects')
-    return ObjectContainer(header="Empty", message="There are no shows to list right now.")
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no shows to list right now.")
   else:
     return oc
 
 #########################################################################################################################
 # For Full Episodes
-# found this that gives shows and episodes with descriptions and thumbs for original show full episodes
+# found this URL that gives shows and episodes with descriptions and thumbs for original show full episodes
 # http://www.tvland.com/fragments/search_results/related_episodes_seasons?showId=25573&seasonId=63748
 @route(PREFIX + '/primefullepisodes')
 def PrimeFullEpisodes(title, url):
@@ -148,33 +126,31 @@ def PrimeFullEpisodes(title, url):
   while seasons > 0:
     list_num = seasons - 1
     seasonid = season_list[list_num]
-    show_url = EPISODE_FIND + 'showId=' + showid + '&seasonId=' + seasonid
+    show_url = EPISODE_FIND % (showid, seasonid)
     html = HTML.ElementFromURL(show_url)
     try:
       for episode in html.xpath('//div[@class="episodeContainer"]'):
-        ep_url = episode.xpath('./div[@class="episodeTitle"]/a//@href')[0]
-        if ep_url:
+        url = episode.xpath('./div[@class="episodeTitle"]/a//@href')[0]
+        if url:
           title = episode.xpath('./div[@class="episodeTitle"]/a//text()')[0]
           episode_num = episode.xpath('./div/div[@class="episodeIdentifier"]//text()')[0]
           episode_num = episode_num.replace('Episode #', '')
           date = episode.xpath('./div/div[@class="episodeAirDate"]/text()')[0]
-          date = Datetime.ParseDate(date)
           thumb = episode.xpath('./div/div[@class="episodeImage"]/a/img//@src')[0]
           thumb = thumb.split('?')[0]
           description = episode.xpath('./div/div/div[@class="episodeDescription"]/text()')[0]
           duration = episode.xpath('./div/div/div[@class="episodeDescription"]/span//text()')[0]
-          duration = duration.replace("(", '').replace(")", '')
-          duration = Datetime.MillisecondsFromString(duration)
-          page = HTML.ElementFromURL(url)
+          duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
+
           oc.add(EpisodeObject(
-            url = ep_url, 
+            url = url, 
             title = title,
             season = int(seasons),
-            thumb = Resource.ContentsOfURLWithFallback(thumb, fallback=R(ICON)),
+            thumb = Resource.ContentsOfURLWithFallback(thumb),
             summary = description,
             index = int(episode_num),
-            duration = int(duration),
-            originally_available_at = date))
+            duration = duration,
+            originally_available_at = Datetime.ParseDate(date)))
 
         else:
           pass
@@ -188,7 +164,7 @@ def PrimeFullEpisodes(title, url):
 
   if len(oc) < 1:
     Log ('still no value for objects')
-    return ObjectContainer(header="Empty", message="There are no episodes to list right now.")
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no episodes to list right now.")
   else:
     return oc
 #########################################################################################################################
@@ -199,37 +175,35 @@ def FullEpisodes(title, url):
   oc = ObjectContainer(title2=title)
   html = HTML.ElementFromURL(url)
   for episode in html.xpath('//div[@class="episodeContainer"]'):
-    ep_url = episode.xpath('./div[@class="episodeTitle"]/a//@href')[0]
+    url = episode.xpath('./div[@class="episodeTitle"]/a//@href')[0]
     # Some of the files do not have a url, so need to keep those that do and skip those that do not
-    if ep_url:
+    if url:
       title = episode.xpath('./div[@class="episodeTitle"]/a//text()')[0]
       episode_num = episode.xpath('./div/div[@class="episodeIdentifier"]//text()')[0]
       episode_num = episode_num.replace('Episode #', '')
       date = episode.xpath('./div/div[@class="episodeAirDate"]/text()')[0]
-      date = Datetime.ParseDate(date)
       thumb = episode.xpath('./div/div[@class="episodeImage"]/a/img//@src')[0]
       thumb = thumb.split('?')[0]
       # because some of the shows do not have a separate entry for the duration, it messes up my pull for 
-	  # description and duration, so best to get description from mgid rss and put a try on duration
+      # description and duration, so have to give two options for description and add a try to each
       try:
-        description = GetDesc(ep_url)
+        description = episode.xpath('./div/div/div[@class="episodeDescription"]/text()')[0]
       except:
-        description = 'No Description'
+        description = episode.xpath('./div/div/div[@class="episodeDescription"]//text()')[0]
       try:
         duration = episode.xpath('./div/div/div[@class="episodeDescription"]/span//text()')[0]
-        duration = duration.replace("(", '').replace(")", '')
-        duration = Datetime.MillisecondsFromString(duration)
+        duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
       except:
         duration = 0
 
       oc.add(EpisodeObject(
-        url = ep_url, 
+        url = url, 
         title = title,
-        thumb = Resource.ContentsOfURLWithFallback(thumb, fallback=R(ICON)),
+        thumb = Resource.ContentsOfURLWithFallback(thumb),
         summary = description,
         index = int(episode_num),
-        duration = int(duration),
-        originally_available_at = date))
+        duration = duration,
+        originally_available_at = Datetime.ParseDate(date)))
 
     else:
      pass
@@ -238,7 +212,7 @@ def FullEpisodes(title, url):
 
   if len(oc) < 1:
     Log ('still no value for objects')
-    return ObjectContainer(header="Empty", message="There are no episodes to list right now.")
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no episodes to list right now.")
   else:
     return oc
 
@@ -248,89 +222,80 @@ def FullEpisodes(title, url):
 def VideoClipLatest(title):
 
   oc = ObjectContainer(title2=title)
-  mgid = GetMGID(CLIPS)
-  xml_url = FEED + mgid
-  xml = XML.ElementFromURL(xml_url)
+  xml = GetRSS(CLIPS)
   for video in xml.xpath('//item'):
-    epUrl = video.xpath('./link//text()')[0]
-    epTitle = video.xpath('./title//text()')[0]
-    epDate = video.xpath('./pubDate//text()')[0]
-    epDate = Datetime.ParseDate(epDate)
+    url = video.xpath('./link//text()')[0]
+    title = video.xpath('./title//text()')[0]
+    date = video.xpath('./pubDate//text()')[0]
     description = video.xpath('./description//text()')[0]
-    epThumb = video.xpath('./media:group/media:thumbnail//@url', namespaces={'media':'http://search.yahoo.com/mrss/'})[0]
+    thumb = video.xpath('./media:group/media:thumbnail//@url', namespaces={'media':'http://search.yahoo.com/mrss/'})[0]
 
     oc.add(VideoClipObject(
-      url = epUrl, 
-      title = epTitle, 
+      url = url, 
+      title = title, 
       summary = description, 
-      thumb = epThumb, 
-      originally_available_at = epDate
+      thumb = thumb, 
+      originally_available_at = Datetime.ParseDate(date)
       ))
 
   return oc
   
 #########################################################################################################################
-# For video clips
-# here is a url for adding pages
+# here is a sample url for adding pages
 # 'http://www.tvland.com/shows/the-soul-man/video-clips?page=2&sortBy=date&contentTypes=Video&season=&collectionId='
-@route(PREFIX + '/clips', total=int, page=int)
-def Clips(title, url, total, page = 1):
+@route(PREFIX + '/clips', total=int)
+def Clips(title, url, page_url = ''):
 
   oc = ObjectContainer(title2=title)
-  # we want this number to reflect the total number of pages so we are using the base url
-  pages_num = GetNumPages(total)
-  local_url = url + '?page=' + str(page) + '&sortBy=date&contentTypes=Video'
-
+  if not page_url:
+    local_url = url + FIRST_PAGE
+  else:
+    local_url = url + page_url
+  Log('the value of local_url is %s' %local_url)
   html = HTML.ElementFromURL(local_url)
   for episode in html.xpath('//div[@class="search_entry"]'):
-    ep_url = episode.xpath('./div/div/div/h3/a//@href')[0]
+    vid_url = episode.xpath('./div/div/div/h3/a//@href')[0]
     # Some of the files do not have a url, so need to keep those that do and skip those that do not
-    if ep_url:
-      title = episode.xpath('./div/div/div[@class="search_text"]/h3/a//text()')[0]
-      title = title.lstrip()
+    if vid_url:
+      vid_title = episode.xpath('./div/div/div[@class="search_text"]/h3/a//text()')[0]
+      vid_title = title.lstrip()
       thumb = episode.xpath('./div/div/div[@class="search_image"]/a/div/div/div/img//@src')[0]
       thumb = thumb.split('?')[0]
-      # because some of the shows do not have a separate entry for the duration, it messes up my pull for
-	  # description and duration, so best to get description from mgid rss and put a try on duration
+      # all of the clips appear to include a separate entry for the duration, but just to be safe
+      # I am still keeping the two options and adding a try for description and duration
       try:
-        description = GetDesc(ep_url)
+        description = episode.xpath('./div/div/div[@class="search_text"]/text()')[2]
       except:
-        description = 'No Description'
+        description = episode.xpath('./div/div/div[@class="search_text"]//text()')[2]
+      description = description.strip()
+      Log('the value of description is %s' %description)
       try:
         duration = episode.xpath('./div/div/div[@class="search_text"]/span//text()')[0]
-        duration = duration.replace("(", '').replace(")", '')
-        duration = Datetime.MillisecondsFromString(duration)
+        duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
       except:
         duration = 0
 
       oc.add(VideoClipObject(
-        url = ep_url, 
-        title = title,
-        thumb = Resource.ContentsOfURLWithFallback(thumb, fallback=R(ICON)),
-        summary = description,
-        duration = int(duration)))
+        url = vid_url, 
+        title = vid_title,
+        thumb = Resource.ContentsOfURLWithFallback(thumb),
+        summary = description.strip(),
+        duration = duration))
 
     else:
       pass
-
-# here we add pages and used total number of videos to make sure it returns videos with more than 9 pages of returns
-  if pages_num > 1:
-    page = html.xpath('//div[@class="search_pagination"]/span[@class="pageOn"]//text()')[1]
-    Log('the value of page is %s' %page)
-    page = int(page)
-    page = page + 1 
-    if page <= pages_num: 
-      oc.add(NextPageObject(
-      key = Callback(Clips, title = title, url = url, total= total, page = page), 
-      title = L("Next Page ...")))
-    else:
+  
+  try:
+    page_url = 	html.xpath('//div[@class="search_pagination"]/a[@class="next"]//@href')
+    Log('the value of page_url is %s' %page_url)
+    if page_url:
+      oc.add(NextPageObject(key = Callback(Clips, title = title, url = url, page_url = page_url), title = L("Next Page ...")))
+  except:
       pass
-  else:
-    pass
 
   if len(oc) < 1:
     Log ('still no value for objects')
-    return ObjectContainer(header="Empty", message="There are no episodes to list right now.")
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no episodes to list right now.")
   else:
     return oc
 
@@ -353,69 +318,35 @@ def GetSeasonIDs(url):
     season_list.append(id)
   return (season_list)
 
-##################################################################################################################################
-# this pulls the numbers from the pagination code at the bottom of each page
-# use the total number of videos to make sure we get all returns
-@route(PREFIX + '/getnumpages', total=int)
-def GetNumPages(total):
-
-  pages = float(total) / 20
-  Log('the value of pages is %s' %pages)
-  total_pages = int(total) / 20
-  Log('the value of total_pages is %s' %total_pages)
-  if  pages > total_pages:
-    total_pages = total_pages +1
-    Log('the value of total_pages is %s' %total_pages)
-  return (total_pages)
-
 #############################################################################################################################
-# This is a function to pull the thumb for shows. Cannot get the thumbs for video clip shows so this is a way to 
-# try to find them. the statement below works for most is
-# http://tvland.mtvnimages.com/images/shows/ + show_name + /promos/ + show_name + _watch_00.jpg
+# This is a function to pull the thumb for shows. Pulling from a side list in the main clip page that only returns title and url 
+# This statement works for most is: 'http://tvland.mtvnimages.com/images/shows/' + show_name + '/promos/' + show_name + '_watch_00.jpg'
+# Added shoul man since I know where it is
 @route(PREFIX + '/getthumb')
-def GetThumb(title):
-  show_name = title.lower()
-  show_name = show_name.rstrip()
-  show_name = show_name.replace(' ', '_')
-  show_name = show_name.replace(',', '')
-  show_name = show_name.replace("'", '')
-  show_name = show_name.replace('the_andy_griffith_show', 'andy_griffith_show')
-  show_name = show_name.replace('the_cosby_show', 'bill_cosby_show')
-  show_name = show_name.replace('_-_starring_fran_drescher', '')
+def GetThumb(url):
+  show_name = url.split('/shows/')[1]
+  show_name = show_name.replace('/video-clips', '')
+  show_name = show_name.replace('-', '_')
 
-  if show_name == 'hot_in_cleveland':
-    thumb = SHOW_THUMBS + 'hot_in_cleveland/hot_in_cleveland_watch_background_4f5d00.jpg'
-  elif show_name == 'the_soul_man':
-    thumb = SHOW_THUMBS + 'soul_man/promos/season1/the_soul_man_watch_00.jpg'
-  elif show_name == 'happily_divorced':
-    thumb = SHOW_THUMBS + 'happily_divorced/promos/season2/happily_divorced_watch_00.jpg'
+  if show_name == 'the_soul_man':
+    show_name = 'soul_man'
+    thumb = SHOW_THUMBS %show_name + 'season1/the_soul_man_watch_00.jpg'
   else:
-    thumb = SHOW_THUMBS + show_name + '/promos/' + show_name + '_watch_00.jpg'
-
+    thumb = SHOW_THUMBS %show_name + show_name + '_watch_00.jpg'
   return thumb
 
 ###############################################################################################################
-# this gets the mgid from a page. For individual video pages, it returns the mgid for that episode or video
-# for show pages, it returns the mgid for a video clip playlist, and for full episode pages, it returns the mgid for 
-# the episode currently playing and there is also a latest video playlist mgid on the video main page
-# Can be use with the feed http://www.tvland.com/feeds/mrss?uri= by adding mgid 
+# this gets the mgid from a page. Can be use with the feed http://www.tvland.com/feeds/mrss?uri= by adding mgid 
 # has title, thumb and description, and date for each video and playlist
 
 @route(PREFIX + '/getmgid', mgid=str)
-def GetMGID(url):
+def GetRSS(url):
   page = HTML.ElementFromURL(url)
   mgid = page.xpath('//div[@id="video_player_box"]//@data-mgid')[0]
-  return mgid
+  xml = XML.ElementFromURL(FEED %mgid)
 
-#################################################################################################################
-# this pulls the description from the feeds when unable to easily get them from the url
-@route(PREFIX + '/getdesc', desc=str)
-def GetDesc(url):
-  mgid = GetMGID(url)
-  xml_url = FEED + mgid
-  xml = XML.ElementFromURL(xml_url)
-  desc = xml.xpath('//channel/description//text()')[0]
-  return desc
+  return xml
+
 
 # Notes
 
