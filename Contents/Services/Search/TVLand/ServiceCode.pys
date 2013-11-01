@@ -1,0 +1,78 @@
+SEARCH_URL = 'http://www.tvland.com/search?keywords=%s'
+TVLAND_URL = 'http://www.tvland.com'
+
+####################################################################################################
+def Search(query):
+  oc = ObjectContainer()
+  
+  local_url = SEARCH_URL %String.Quote(query, usePlus = True)
+  html = HTML.ElementFromURL(local_url)
+  for episode in html.xpath('//div[@class="search_content"]'):
+    # Full Episodes search has a slightly different structure to video clip search, so using try/except where needed
+    # Title, show_title, description are in diffferent locations and only full episodes have episode meta needed for episode and date
+    try:
+      vid_url = episode.xpath('./div[@class="search_image"]/a//@href')[0]
+    except:
+      continue
+    # Some of the files do not have a url, so need to keep those that do and skip those that do not
+    if vid_url:
+      try:
+        vid_title = episode.xpath('./div[@class="search_text"]/h3/a//text()')[0]
+      except:
+        vid_title = episode.xpath('./h3/a//text()')[0]
+      vid_title = vid_title.strip()
+      try:
+        show_title = episode.xpath('./div[@class="search_text"]/div[@class="search_show"]/b//text()')[0]
+      except:
+        show_title = episode.xpath('./div[@class="search_show"]/b//text()')[0]
+      vid_title = show_title + ' - ' + vid_title
+      thumb = episode.xpath('./div[@class="search_image"]/a/div/div/div/img//@src')[0].split('?')
+      # description has four to six entries. For clips the description is the [2] entry. For Episodes, the description is the [0] entry
+      # so need to create a list of entries and look for which one has data
+      try:
+        description = episode.xpath('./div[@class="search_text"]/text()')
+        for entry in description:
+          entry = entry.strip()
+          if entry:
+            summary = entry
+          else:
+            pass
+      except:
+        summary = ''
+      try:
+        duration = episode.xpath('./div[@class="search_text"]/span//text()')[0]
+        duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
+      except:
+        duration = 0
+      # For Episode and date, both peices of data as well as a '|' are in /div[@class="episode_meta"]/span/text()
+      try:
+        episode_data = episode.xpath('./div[@class="episode_meta"]/span/text()')
+        episode = episode_data[0].replace('#', '')
+        if len(episode)==3:
+          season = int(episode[0])
+        else:
+          season = 0
+        date = Datetime.ParseDate(episode_data[2])
+      except:
+        episode = 0
+        season = 0
+        date = None
+
+      oc.add(EpisodeObject(
+        url = vid_url, 
+        title = vid_title,
+        thumb = Resource.ContentsOfURLWithFallback(thumb),
+        summary = summary,
+        index = int(episode),
+        season = season,
+        originally_available_at = date,
+        duration = duration))
+
+    else:
+      pass
+  
+  if len(oc) < 1:
+    Log ('still no value for objects')
+    return ObjectContainer(header="Empty", message="This directory appears to be empty. There are no videos to list right now.")
+  else:
+    return oc

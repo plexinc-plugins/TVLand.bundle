@@ -31,7 +31,7 @@ def MainMenu():
   oc = ObjectContainer()
   oc.add(DirectoryObject(key=Callback(FullEpMain, title="Full Episodes"), title="Full Episodes"))
   oc.add(DirectoryObject(key=Callback(VideoClipMain, title="Video Clips"), title="Video Clips"))
-  oc.add(InputDirectoryObject(key=Callback(Clips, title="Search Videos", url=SEARCH_URL), title="Search Videos", summary="Click here to search for Videos on TVLand", prompt="Search for videos in TVLand"))
+  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.tvland", title=L("Search TVLand Videos"), prompt=L("Search for Videos")))
 	
   return oc
 #########################################################################################################################
@@ -269,14 +269,12 @@ def FeaturedVideos(title, url):
   else:
     return oc
 #########################################################################################################################
-# This function is used for prodicing video clips as well as search results
+# This function is used for prodicing video clips
 @route(PREFIX + '/clips')
-def Clips(title, url, page_url = '', query=''):
+def Clips(title, url, page_url = ''):
 
   oc = ObjectContainer(title2=title)
   # If there is not a page_url, then it is the first time through, so need to create proper url
-  if query:
-    url = SEARCH_URL %String.Quote(query, usePlus = True)
   if page_url:
     if '?keywords' in url:
       local_url = TVLAND_URL + page_url
@@ -286,27 +284,15 @@ def Clips(title, url, page_url = '', query=''):
     local_url = url
   html = HTML.ElementFromURL(local_url)
   for episode in html.xpath('//div[@class="search_content"]'):
-    # Full Episodes search has a slightly different structure to video clip search and video clip by shows, so using try/except where needed
-    # Title, show_title, description are in diffferent locations and only full episodes have episode meta needed for episode and date
+    # Some of the files do not have a url, so need to keep those that do and skip those that do not
     try:
       vid_url = episode.xpath('./div[@class="search_image"]/a//@href')[0]
     except:
       continue
-    # Some of the files do not have a url, so need to keep those that do and skip those that do not
     if vid_url:
-      try:
-        vid_title = episode.xpath('./div[@class="search_text"]/h3/a//text()')[0]
-      except:
-        vid_title = episode.xpath('./h3/a//text()')[0]
-      vid_title = vid_title.strip()
-      try:
-        show_title = episode.xpath('./div[@class="search_text"]/div[@class="search_show"]/b//text()')[0]
-      except:
-        show_title = episode.xpath('./div[@class="search_show"]/b//text()')[0]
-      vid_title = show_title + ' - ' + vid_title
-      thumb = episode.xpath('./div[@class="search_image"]/a/div/div/div/img//@src')[0]
-      thumb = thumb.split('?')[0]
-      # description has four to six entries. For clips the description is the [2] entry. For Episodes, the description is the [0] entry
+      vid_title = episode.xpath('./div[@class="search_text"]/h3/a//text()')[0].strip()
+      thumb = episode.xpath('./div[@class="search_image"]/a/div/div/div/img//@src')[0].split('?')
+      # description has four to six entries. For clips the description is the [2] entry.
       # so need to create a list of entries and look for which one has data
       try:
         description = episode.xpath('./div[@class="search_text"]/text()')
@@ -318,33 +304,14 @@ def Clips(title, url, page_url = '', query=''):
             pass
       except:
         summary = ''
-      try:
-        duration = episode.xpath('./div[@class="search_text"]/span//text()')[0]
-        duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
-      except:
-        duration = 0
-      # For Episode and date, both peices of data as well as a '|' are in /div[@class="episode_meta"]/span/text()
-      try:
-        episode_data = episode.xpath('./div[@class="episode_meta"]/span/text()')
-        episode = episode_data[0].replace('#', '')
-        if len(episode)==3:
-          season = int(episode[0])
-        else:
-          season = 0
-        date = Datetime.ParseDate(episode_data[2])
-      except:
-        episode = 0
-        season = 0
-        date = None
+      duration = episode.xpath('./div[@class="search_text"]/span//text()')[0]
+      duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
 
-      oc.add(EpisodeObject(
+      oc.add(VideoClipObject(
         url = vid_url, 
         title = vid_title,
         thumb = Resource.ContentsOfURLWithFallback(thumb),
         summary = summary,
-        index = int(episode),
-        season = season,
-        originally_available_at = date,
         duration = duration))
 
     else:
