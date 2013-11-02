@@ -26,7 +26,7 @@ def Search(query):
       except:
         show_title = episode.xpath('./div[@class="search_show"]/b//text()')[0]
       vid_title = show_title + ' - ' + vid_title
-      thumb = episode.xpath('./div[@class="search_image"]/a/div/div/div/img//@src')[0].split('?')
+      thumb = episode.xpath('./div[@class="search_image"]/a/div/div/div/img//@src')[0].split('?')[0]
       # description has four to six entries. For clips the description is the [2] entry. For Episodes, the description is the [0] entry
       # so need to create a list of entries and look for which one has data
       try:
