@@ -23,8 +23,11 @@ def Search(query):
             summary = episode.xpath('.//div[@class="search_text"]/text()')[0].strip()
             if not summary:
                 summary = episode.xpath('.//div[@class="search_text"]/text()')[2].strip()
-            duration = episode.xpath('.//span[@class="search_duration"]//text()')[0]
-            duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
+            try:
+                duration = episode.xpath('.//span[@class="search_duration"]//text()')[0]
+                duration = Datetime.MillisecondsFromString(duration.replace("(", '').replace(")", ''))
+            except:
+                duration = None
             episode_data = episode.xpath('./div[@class="episode_meta"]/span/text()')
             if episode_data:
                 episode = episode_data[0].replace('#', '')
