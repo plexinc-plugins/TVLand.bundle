@@ -6,7 +6,13 @@
         <string>com.plexapp.plugins.tvland</string>
         <key>PlexClientPlatforms</key>
         <string>*</string>
+        <key>PlexClientPlatformExclusions</key>
+        <string>*</string>
         <key>PlexFrameworkVersion</key>
         <string>2</string>
+        <key>PlexPluginRegions</key>
+            <array>
+                <string>US</string>
+            </array>
 </dict>
 </plist>
