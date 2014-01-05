@@ -7,7 +7,7 @@
         <key>PlexClientPlatforms</key>
         <string>*</string>
         <key>PlexClientPlatformExclusions</key>
-        <string>*</string>
+        <string>Android</string>
         <key>PlexFrameworkVersion</key>
         <string>2</string>
         <key>PlexPluginRegions</key>
