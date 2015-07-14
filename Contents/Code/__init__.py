@@ -4,7 +4,9 @@ ART      = 'art-default.jpg'
 ICON     = 'icon-default.png'
 
 BASE_URL = 'http://www.tvland.com'
-FULLEP_URL = 'http://www.tvland.com/full-episodes'
+FULLEP_URL = 'http://www.tvland.com/full-episodes' 
+# Using Hot in Cleveland full ep page as url
+FULL_SHOW = 'http://www.tvland.com/shows/hot-in-cleveland/full-episodes'
 EPISODE_FIND = 'http://www.tvland.com/fragments/search_results/related_episodes_seasons?showId=%s&seasonId=%s'
 ###################################################################################################
 # Set up containers for all possible objects
@@ -22,17 +24,14 @@ def Start():
 def MainMenu():
 
     oc = ObjectContainer()
-    # This picks up the first url of a show listed under the fullepisode pull sown menu to use for producing a show list
-    #full_show = HTML.ElementFromURL(BASE_URL).xpath('//li[@class="first full_ep"]/a/@href')[0]
-    full_show = HTML.ElementFromURL(FULLEP_URL).xpath('//li[@class="first full_ep"]/a/@href')[0]
-    oc.add(DirectoryObject(key=Callback(Shows, title="Shows", url=full_show), title="Shows"))
+    oc.add(DirectoryObject(key=Callback(Shows, title="Shows", url=FULL_SHOW), title="Shows"))
     oc.add(DirectoryObject(key=Callback(LatestVideos, title="Latest Full Episodes", url=FULLEP_URL), title="Latest Full Episodes")) 
     oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.tvland", title=L("Search TVLand Videos"), prompt=L("Search for Videos")))
     
     return oc
 #########################################################################################################################
 # This function produces a directory for All Shows with Full Episodes
-# We get the list of full episode from any show's full episode page using first show listed under full episodes
+# We get the list of full episode from a show's full episode page using Hot In Cleveland right now
 # It is the best source to pull the list of shows because this location includes images
 @route(PREFIX + '/shows')
 def Shows(title, url):
