@@ -3,19 +3,24 @@ TVLAND_URL = 'http://www.tvland.com'
 
 ####################################################################################################
 def Search(query):
+
     oc = ObjectContainer()
-  
-    local_url = SEARCH_URL %String.Quote(query, usePlus = True)
+
+    local_url = SEARCH_URL %String.Quote(query, usePlus=True)
     html = HTML.ElementFromURL(local_url)
+
     for episode in html.xpath('//div[@class="search_content"]'):
+
         # Full Episodes search has a slightly different structure to video clip search, so using try/except where needed
         # Title, show_title, description are in diffferent locations and only full episodes have episode meta needed for episode and date
         try:
             vid_url = episode.xpath('.//h3/a/@href')[0].split('?')[0]
         except:
             continue
+
         # Some of the files do not have a url, so need to keep those that do and skip those that do not
         if vid_url:
+
             vid_title = episode.xpath('.//h3/a/text()')[0].strip()
             show_title = episode.xpath('.//div[@class="search_show"]//text()')[0]
             thumb = episode.xpath('.//img/@src')[0].split('?')[0]
@@ -29,32 +34,37 @@ def Search(query):
             except:
                 duration = None
             episode_data = episode.xpath('./div[@class="episode_meta"]/span/text()')
+
             if episode_data:
+
                 episode = int(episode_data[0].replace('#', ''))
                 date = Datetime.ParseDate(episode_data[2])
 
                 oc.add(EpisodeObject(
-                    url = vid_url, 
+                    url = vid_url,
                     show = show_title,
                     title = vid_title,
                     thumb = Resource.ContentsOfURLWithFallback(thumb),
                     summary = summary,
                     index = episode,
                     originally_available_at = date,
-                    duration = duration))
+                    duration = duration
+                ))
 
             else:
+
                 if not vid_title.startswith(show_title):
                     vid_title = '%s: %s' %(show_title, vid_title)
+
                 oc.add(VideoClipObject(
-                    url = vid_url, 
+                    url = vid_url,
                     title = vid_title,
                     thumb = Resource.ContentsOfURLWithFallback(thumb),
                     summary = summary,
-                    duration = duration))
-  
+                    duration = duration
+                ))
+
     if len(oc) < 1:
-        Log ('still no value for objects')
         return ObjectContainer(header="Empty", message="There are no videos matching this query.")
     else:
         return oc
