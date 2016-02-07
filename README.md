@@ -1,8 +1,4 @@
-TV Land
-=========
+License
+-------
 
-Plex Channel project for TV Land website
-
-Client and Region Restrictions: 
-This channel may not work on newer Plex clients if they cannot handle full episode videos from channels in parts. If the multiple parts for a full episode do not load on your player, refer to your Plex clients support pages to make sure your client supports videos that are split into parts.  
-Also this channel is region restricted to the United States, because you can only access the videos on this website from a United States IP address.
+If the software submitted to this repository accesses or calls any software provided by Plex (“Interfacing Software”), then as a condition for receiving services from Plex in response to such accesses or calls, you agree to grant and do hereby grant to Plex and its affiliates worldwide a worldwide, nonexclusive, and royalty-free right and license to use (including testing, hosting and linking to), copy, publicly perform, publicly display, reproduce in copies for distribution, and distribute the copies of any Interfacing Software made by you or with your assistance; provided, however, that you may notify Plex at legal@plex.tv if you do not wish for Plex to use, distribute, copy, publicly perform, publicly display, reproduce in copies for distribution, or distribute copies of an Interfacing Software that was created by you, and Plex will reasonable efforts to comply with such a request within a reasonable time.
