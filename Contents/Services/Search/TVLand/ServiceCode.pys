@@ -64,7 +64,4 @@ def Search(query):
                     duration = duration
                 ))
 
-    if len(oc) < 1:
-        return ObjectContainer(header="Empty", message="There are no videos matching this query.")
-    else:
-        return oc
+    return oc
