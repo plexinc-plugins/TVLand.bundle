@@ -5,7 +5,7 @@ ICON = 'icon-default.jpg'
 
 BASE_URL = 'http://www.tvland.com'
 RE_MANIFEST_URL = Regex('var triforceManifestURL = "(.+?)";', Regex.DOTALL)
-RE_MANIFEST_FEED = Regex('var triforceManifestFeed = (.+?);\n', Regex.DOTALL)
+RE_MANIFEST = Regex('var triforceManifestFeed = (.+?);\n', Regex.DOTALL)
 
 EXCLUSIONS = []
 SEARCH ='http://relaunch-search.tvland.com/solr/tvland/select?q=%s&wt=json&defType=edismax&start='
