@@ -198,29 +198,41 @@ def ShowVideos(title, url):
         # catch any bad links that get sent here
         if not ('/video-clips/') in vid_url and not ('/video-playlists/') in vid_url and not ('/full-episodes/') in vid_url and not ('/episodes/') in vid_url:
             continue
-        if 'bellator.spike.com' in vid_url:
-            continue
 
-        thumb = video['images'][0]['url']
+        # Individual show images are under images and full episode feeds are under image
+        try: thumb = video['images'][0]['url']
+        except:
+            try: thumb = video['image'][0]['url']
+            except:  thumb = None
+        if thumb and thumb.startswith('//'):
+            thumb = 'http:' + thumb
 
-        show = video['show']['title']
+        # Show names for Individual shows are under show/title and full episode feeds are under showTitle
+        try: show = video['show']['title']
+        except: show = video['showTitle']
         try: episode = int(video['season']['episodeNumber'])
         except: episode = 0
         try: season = int(video['season']['seasonNumber'])
         except: season = 0
         
-        try: unix_date = video['airDate']
-        except:
-            try: unix_date = video['publishDate']
-            except: unix_date = unix_date = video['date']['originalPublishDate']['timestamp']
-        date = Datetime.FromTimestamp(float(unix_date)).strftime('%m/%d/%Y')
-        date = Datetime.ParseDate(date)
+        # Dates for Individual shows are unix and full episode feeds are strings
+        try: raw_date = video['airDate']
+        except: raw_date = video['publishDate']
+        if raw_date and raw_date.isdigit(): 
+            raw_date = Datetime.FromTimestamp(float(raw_date)).strftime('%m/%d/%Y')
+        date = Datetime.ParseDate(raw_date)
 
-        # Durations for clips have decimal points
+        # Duration for Individual shows are integers/floats and full episode feeds are strings
         duration = video['duration']
-        if not isinstance(duration, int):
-            duration = int(duration.split('.')[0])
-        duration = duration * 1000
+        if duration:
+            if isinstance(duration, int):
+                duration = duration * 1000
+            else:
+                try: duration = Datetime.MillisecondsFromString(duration)
+                except:
+                    # Durations for clips have decimal points
+                    try: duration = int(duration.split('.')[0]) * 1000
+                    except:  duration = 0
 
         # Everything else has episode and show info now
         oc.add(EpisodeObject(
