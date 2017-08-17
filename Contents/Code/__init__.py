@@ -81,7 +81,7 @@ def FeedMenu(title, url, thumb=''):
                 title=title,
                 thumb=Resource.ContentsOfURLWithFallback(url=thumb)
             ))
-            for item in json['result']['shows']:
+            for item in json['result']['data']['shows']:
                 oc.add(DirectoryObject(key=Callback(ShowVideos, title=item['title'], url=item['url']),
                     title=item['title']
                 ))
@@ -193,7 +193,10 @@ def ShowVideos(title, url):
     
     for video in videos:
 
-        vid_url = video['canonicalURL']
+        try: vid_url = video['canonicalURL']
+        except:
+            try: vid_url = video['itemURL']
+            except:  continue
 
         # catch any bad links that get sent here
         if not ('/video-clips/') in vid_url and not ('/video-playlists/') in vid_url and not ('/full-episodes/') in vid_url and not ('/episodes/') in vid_url:
