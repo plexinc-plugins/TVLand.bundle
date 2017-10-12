@@ -250,8 +250,11 @@ def ShowVideos(title, url):
             summary = video['description']
         ))
 
-    try: next_page = json['result']['nextPageURL']
-    except: next_page = None
+    # Individual show next pages are under results/nextPageURL and full episode feeds are under results/data
+    try: next_page = json['result']['data']['nextPageURL']
+    except: 
+        try: next_page = json['result']['nextPageURL']
+        except: next_page = None
 
     if next_page and len(oc) > 0:
 
